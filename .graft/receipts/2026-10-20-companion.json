@@ -1,0 +1,41 @@
+{
+  "schema": "graft.receipt.v1",
+  "sessionId": "5c4a616a-62e8-4f35-bb6c-58686ba3775a",
+  "agent": "codex",
+  "task": "Create a pinned, independently reproducible Bijou job-monitor book companion",
+  "bytesConsumed": 11870,
+  "filesRead": [
+    "published Bijou 7.2.0 contracts inspected via commit-worldline projections",
+    "src/presentation.ts"
+  ],
+  "filesModified": [
+    ".github/workflows/verify.yml",
+    ".gitignore",
+    ".node-version",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "VERIFICATION.json",
+    "checkpoints/run.ts",
+    "exercises/run.ts",
+    "package-lock.json",
+    "package.json",
+    "src/app.ts",
+    "src/capture.ts",
+    "src/effects.ts",
+    "src/fixtures.ts",
+    "src/job.ts",
+    "src/main.ts",
+    "src/monitor.ts",
+    "src/presentation.ts",
+    "src/protocol.ts",
+    "test/monitor.test.ts",
+    "test/presentation.test.ts",
+    "tsconfig.json"
+  ],
+  "tripwires": [
+    "Graft refuses published dist declarations; used bounded source projections at release commit instead"
+  ],
+  "commit": "recorded by enclosing Git commit",
+  "accounting": "Graft active companion workspace slice totalBytesReturned, excluding this stats response; release source projections are recorded under the Bijou workspace slice."
+}

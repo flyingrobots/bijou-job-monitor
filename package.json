@@ -1,0 +1,45 @@
+{
+  "name": "@flyingrobots/bijou-job-monitor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The reproducible job-monitor companion to the Bijou Documentation Book",
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "James Ross",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "test": "vitest run --maxWorkers=1",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm test",
+    "capture": "tsx src/capture.ts",
+    "checkpoint": "tsx checkpoints/run.ts",
+    "exercise": "tsx exercises/run.ts"
+  },
+  "dependencies": {
+    "@flyingrobots/bijou": "7.2.0",
+    "@flyingrobots/bijou-node": "7.2.0",
+    "@flyingrobots/bijou-tui": "7.2.0"
+  },
+  "devDependencies": {
+    "tsx": "4.22.4",
+    "typescript": "5.9.3",
+    "@types/node": "22.18.0",
+    "vitest": "4.1.8"
+  },
+  "files": [
+    "src",
+    "checkpoints",
+    "exercises",
+    "test",
+    "README.md",
+    "VERIFICATION.json",
+    "tsconfig.json",
+    "LICENSE",
+    "NOTICE",
+    "package-lock.json",
+    ".node-version"
+  ]
+}
