@@ -49,6 +49,20 @@ test('late logs cannot replace a newly selected job or reopen a closed screen', 
   assert.equal(loaded.detail, 'right log');
   assert.equal(loaded.update({ type: 'dismiss' }).model.update({ type: 'logs-loaded', id: 'test', epoch: loaded.epoch, text: 'LATE' }).model.screen, 'jobs');
 });
+test('reopening logs for the same job rejects the earlier request by epoch alone', () => {
+  const first = Monitor.initial().update({ type: 'logs' }).model;
+  const reopened = first.update({ type: 'dismiss' }).model.update({ type: 'logs' }).model;
+  assert.equal(reopened.selected, first.selected); assert.equal(reopened.screen, 'logs');
+  assert.equal(reopened.update({ type: 'logs-loaded', id: 'compile', epoch: first.epoch, text: 'EARLIER' }).model.detail, '');
+  assert.equal(reopened.update({ type: 'logs-loaded', id: 'compile', epoch: reopened.epoch, text: 'current log' }).model.detail, 'current log');
+});
+test('progress from a cancelled run cannot advance the restarted run', () => {
+  const started = Monitor.initial().update({ type: 'start' }).model; const oldRun = started.jobs[0]!.run;
+  const restarted = started.update({ type: 'ask-cancel' }).model.update({ type: 'confirm-cancel' }).model.update({ type: 'start' }).model;
+  assert.equal(restarted.jobs[0]?.status, 'running'); assert.notEqual(restarted.jobs[0]?.run, oldRun);
+  assert.equal(restarted.update({ type: 'progress', id: 'compile', run: oldRun, percent: 80 }).model.jobs[0]?.percent, 0);
+  assert.equal(restarted.update({ type: 'progress', id: 'compile', run: restarted.jobs[0]!.run, percent: 30 }).model.jobs[0]?.percent, 30);
+});
 test('the asynchronous driver completes, fails, cancels and stops after disposal', () => {
   const scheduler = new ManualScheduler(); const driver = new EffectDriver(scheduler); const events: MonitorEvent[] = [];
   driver.execute({ type: 'run', id: 'compile', run: 1 }, event => events.push(event));
