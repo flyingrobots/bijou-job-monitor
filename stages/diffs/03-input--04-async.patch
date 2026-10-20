@@ -1,0 +1,291 @@
+--- 03-input/app.ts
++++ 04-async/app.ts
+@@ -1,26 +1,40 @@
+ // Copyright 2026 James Ross. SPDX-License-Identifier: Apache-2.0
+ import type { BijouContext } from '@flyingrobots/bijou';
+-import { isKeyMsg, quit, type App } from '@flyingrobots/bijou-tui';
++import { isKeyMsg, quit, type App, type Cmd, type KeyMsg } from '@flyingrobots/bijou-tui';
++import { EffectDriver } from './effects.js';
+ import { Monitor } from './monitor.js';
+ import type { MonitorEvent } from './protocol.js';
+ import { view } from './presentation.js';
+ export interface AppModel { readonly monitor: Monitor; readonly width: number; readonly height: number }
++export function keyIntent(key: KeyMsg): MonitorEvent | undefined {
++  if (key.key === 'up') return { type: 'move', delta: -1 };
++  if (key.key === 'down') return { type: 'move', delta: 1 };
++  if (key.key === 'enter' || key.key === 'return') return { type: 'start' };
++  if (key.key === 'c') return { type: 'ask-cancel' };
++  if (key.key === 'escape') return { type: 'dismiss' };
++  if (key.key === 'f') return { type: 'filter' };
++  if (key.key === 'l') return { type: 'logs' };
++  return undefined;
++}
+ export interface ShutdownPort { subscribe(stop: () => void): () => void }
+-export function createMonitorApp(ctx: BijouContext, shutdown?: ShutdownPort): App<AppModel, { readonly type: 'shutdown' }> {
++export type AppEvent = MonitorEvent | { readonly type: 'shutdown' };
++export function createMonitorApp(ctx: BijouContext, driver: EffectDriver, shutdown?: ShutdownPort): App<AppModel, AppEvent> {
+   return {
+     init: () => [{ monitor: Monitor.initial(), width: ctx.runtime.columns, height: ctx.runtime.rows }, shutdown ? [emit => shutdown.subscribe(() => emit({ type: 'shutdown' }))] : []],
+     update: (message, model) => {
+-      if (message.type === 'shutdown') return [model, [quit()]];
++      if (message.type === 'shutdown') { driver.dispose(); return [model, [quit()]]; }
++      if (isKeyMsg(message)) {
++        if (message.key === 'q' || (message.ctrl && message.key === 'c')) { driver.dispose(); return [model, [quit()]]; }
++        const intent = model.monitor.confirming && (message.key === 'enter' || message.key === 'return') ? { type: 'confirm-cancel' as const } : keyIntent(message);
++        if (!intent) return [model, []];
++        const transition = model.monitor.update(intent);
++        const commands: Cmd<AppEvent>[] = transition.effects.map(effect => emit => { driver.execute(effect, emit); return undefined; });
++        return [{ ...model, monitor: transition.model }, commands];
++      }
+       if (message.type === 'resize') return [{ ...model, width: Math.max(1, message.columns), height: Math.max(1, message.rows) }, []];
+-      if (!isKeyMsg(message)) return [model, []];
+-      if (message.key === 'q' || (message.ctrl && message.key === 'c')) return [model, [quit()]];
+-      let intent: MonitorEvent | undefined;
+-      if (message.key === 'up') intent = { type: 'move', delta: -1 };
+-      if (message.key === 'down') intent = { type: 'move', delta: 1 };
+-      if (message.key === 'enter' || message.key === 'return') intent = { type: model.monitor.confirming ? 'confirm-cancel' : 'start' };
+-      if (message.key === 'c') intent = { type: 'ask-cancel' };
+-      if (message.key === 'escape') intent = { type: 'dismiss' };
+-      return intent ? [{ ...model, monitor: model.monitor.update(intent) }, []] : [model, []];
++      if (message.type === 'mouse' || message.type === 'pulse') return [model, []];
++      const transition = model.monitor.update(message);
++      return [{ ...model, monitor: transition.model }, transition.effects.map(effect => emit => { driver.execute(effect, emit); return undefined; })];
+     },
+     view: model => view(model.monitor, ctx, model.width, model.height),
+   };
+--- 03-input/effects.ts
++++ 04-async/effects.ts
+@@ -0,0 +1,40 @@
++// Copyright 2026 James Ross. SPDX-License-Identifier: Apache-2.0
++import type { Effect, MonitorEvent } from './protocol.js';
++export interface SchedulePort { after(milliseconds: number, callback: () => void): () => void }
++export class EffectDriver {
++  private readonly work = new Map<string, () => void>();
++  private cancelLogs: (() => void) | undefined;
++  private disposed = false;
++  public constructor(private readonly scheduler: SchedulePort) {}
++  public execute(effect: Effect, emit: (event: MonitorEvent) => void): void {
++    if (this.disposed) return;
++    switch (effect.type) {
++      case 'abort': this.work.get(effect.id)?.(); this.work.delete(effect.id); return;
++      case 'abort-logs': this.cancelLogs?.(); this.cancelLogs = undefined; return;
++      case 'load-logs': {
++        this.cancelLogs?.();
++        this.cancelLogs = this.scheduler.after(effect.id === 'compile' ? 300 : 100, () => {
++          if (!this.disposed) emit({ type: 'logs-loaded', id: effect.id, epoch: effect.epoch, text: `Log snapshot for ${effect.id}\nNo external process was launched.\nFixture output: deterministic and inspectable.` });
++        }); return;
++      }
++      case 'run': {
++        this.work.get(effect.id)?.(); let cancelled = false; let pending: (() => void) | undefined;
++        const step = (percent: number): void => {
++          pending = this.scheduler.after(100, () => {
++            if (cancelled || this.disposed) return;
++            emit({ type: 'progress', id: effect.id, run: effect.run, percent });
++            if (percent === 100) {
++              this.work.delete(effect.id);
++              emit(effect.id === 'test' ? { type: 'done', id: effect.id, run: effect.run, error: 'Fixture failure: assertion did not pass' } : { type: 'done', id: effect.id, run: effect.run });
++            } else step(percent + 20);
++          });
++        };
++        this.work.set(effect.id, () => { cancelled = true; pending?.(); }); step(20); return;
++      }
++    }
++  }
++  public dispose(): void {
++    this.disposed = true; this.cancelLogs?.(); this.cancelLogs = undefined;
++    for (const cancel of this.work.values()) cancel(); this.work.clear();
++  }
++}
+--- 03-input/fixtures.ts
++++ 04-async/fixtures.ts
+@@ -2,5 +2,5 @@
+ import { Job } from './job.js';
+ import { Monitor } from './monitor.js';
+ export function exampleSnapshot(): Monitor {
+-  return new Monitor([new Job('compile', 'Compile the application', 'succeeded', 100, 1), new Job('test', 'Run the tests', 'failed', 60, 1, 'Fixture failure: assertion did not pass'), new Job('publish', 'Publish the package', 'running', 40, 1)], 'publish');
++  return new Monitor({ jobs: [new Job('compile', 'Compile the application', 'succeeded', 100, 1), new Job('test', 'Run the tests', 'failed', 60, 1, 'Fixture failure: assertion did not pass'), new Job('publish', 'Publish the package', 'running', 40, 1)], selected: 'publish', failuresOnly: false, confirming: false, screen: 'jobs', epoch: 0, detail: '' });
+ }
+--- 03-input/main.ts
++++ 04-async/main.ts
+@@ -2,6 +2,7 @@
+ import { createNodeContext } from '@flyingrobots/bijou-node';
+ import { run } from '@flyingrobots/bijou-tui';
+ import { createMonitorApp } from './app.js';
++import { EffectDriver } from './effects.js';
+ import { exampleSnapshot } from './fixtures.js';
+ import { present } from './presentation.js';
+ const args = process.argv.slice(2);
+@@ -12,12 +13,14 @@
+ const ctx = createNodeContext();
+ const selectedContext = { ...ctx, mode: mode === 'interactive' ? 'interactive' as const : mode === 'static' ? 'static' as const : mode === 'accessible' ? 'accessible' as const : 'pipe' as const };
+ if (mode !== 'interactive') {
+-  process.stdout.write(present(exampleSnapshot(), selectedContext, process.stdout.columns || 80) + '\n');
++  process.stdout.write(present(exampleSnapshot(), selectedContext, process.stdout.columns || 80, args.includes('--locale=long') ? 'long' : 'en') + '\n');
+ } else {
+   if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error('Interactive mode requires a terminal; use --mode=static, pipe, or accessible');
++  const driver = new EffectDriver({ after: (milliseconds, callback) => { const timer = setTimeout(callback, milliseconds); return () => clearTimeout(timer); } });
+   const shutdown = { subscribe: (stop: () => void): (() => void) => {
+     process.on('SIGINT', stop); process.on('SIGTERM', stop);
+     return () => { process.off('SIGINT', stop); process.off('SIGTERM', stop); };
+   } };
+-  await run(createMonitorApp(selectedContext, shutdown), { ctx: selectedContext });
++  try { await run(createMonitorApp(selectedContext, driver, shutdown), { ctx: selectedContext }); }
++  finally { driver.dispose(); }
+ }
+--- 03-input/monitor.ts
++++ 04-async/monitor.ts
+@@ -1,31 +1,83 @@
+ // Copyright 2026 James Ross. SPDX-License-Identifier: Apache-2.0
+ import { Job } from './job.js';
+-import type { MonitorEvent } from './protocol.js';
+-export class Monitor {
++import type { Effect, MonitorEvent } from './protocol.js';
++interface Snapshot {
++  readonly jobs: readonly Job[];
++  readonly selected: string;
++  readonly failuresOnly: boolean;
++  readonly confirming: boolean;
++  readonly screen: 'jobs' | 'logs';
++  readonly epoch: number;
++  readonly detail: string;
++}
++export interface Transition { readonly model: Monitor; readonly effects: readonly Effect[] }
++export class Monitor implements Snapshot {
+   public readonly jobs: readonly Job[];
+-  public constructor(jobs: readonly Job[], public readonly selected: string, public readonly confirming = false) {
+-    if (!jobs.length || !jobs.some(job => job.id === selected)) throw new Error('Selection must identify a job');
+-    if (new Set(jobs.map(job => job.id)).size !== jobs.length) throw new Error('Job IDs must be unique');
+-    this.jobs = Object.freeze([...jobs]); Object.freeze(this);
++  public readonly selected: string;
++  public readonly failuresOnly: boolean;
++  public readonly confirming: boolean;
++  public readonly screen: 'jobs' | 'logs';
++  public readonly epoch: number;
++  public readonly detail: string;
++  public constructor(snapshot: Snapshot) {
++    if (snapshot.jobs.length === 0 || !snapshot.jobs.some(job => job.id === snapshot.selected)) throw new Error('Selection must identify a job');
++    if (new Set(snapshot.jobs.map(job => job.id)).size !== snapshot.jobs.length) throw new Error('Job IDs must be unique');
++    this.jobs = Object.freeze([...snapshot.jobs]); this.selected = snapshot.selected;
++    this.failuresOnly = snapshot.failuresOnly; this.confirming = snapshot.confirming;
++    this.screen = snapshot.screen; this.epoch = snapshot.epoch; this.detail = snapshot.detail;
++    Object.freeze(this);
+   }
+   public static initial(): Monitor {
+-    return new Monitor([new Job('compile', 'Compile the application'), new Job('test', 'Run the tests'), new Job('publish', 'Publish the package')], 'compile');
++    return new Monitor({ jobs: [new Job('compile', 'Compile the application'), new Job('test', 'Run the tests'), new Job('publish', 'Publish the package')], selected: 'compile', failuresOnly: false, confirming: false, screen: 'jobs', epoch: 0, detail: '' });
+   }
+-  public update(event: MonitorEvent): Monitor {
+-    if (this.confirming && (event.type === 'move' || event.type === 'start' || event.type === 'ask-cancel')) return this;
+-    const job = this.jobs.find(item => item.id === this.selected);
+-    if (!job) throw new Error('Invalid selection');
++  public get visibleJobs(): readonly Job[] { return this.jobs.filter(job => !this.failuresOnly || job.status === 'failed'); }
++  private change(patch: Partial<Snapshot>, effects: readonly Effect[] = []): Transition {
++    return { model: new Monitor({ ...this, ...patch }), effects };
++  }
++  private replace(job: Job, effects: readonly Effect[] = []): Transition {
++    return this.change({ jobs: this.jobs.map(current => current.id === job.id ? job : current) }, effects);
++  }
++  public update(event: MonitorEvent): Transition {
++    // The dialog owns keyboard intentions; worker results can still update jobs.
++    if (this.confirming && ['move', 'filter', 'start', 'logs', 'ask-cancel'].includes(event.type)) return { model: this, effects: [] };
++    const selected = this.jobs.find(job => job.id === this.selected);
++    if (!selected) throw new Error('Invalid monitor selection');
+     switch (event.type) {
+       case 'move': {
+-        const index = this.jobs.findIndex(item => item.id === this.selected);
+-        const next = this.jobs[(index + event.delta % this.jobs.length + this.jobs.length) % this.jobs.length];
+-        return next ? new Monitor(this.jobs, next.id) : this;
++        const visible = this.visibleJobs;
++        if (!visible.length) return { model: this, effects: [] };
++        const index = Math.max(0, visible.findIndex(job => job.id === this.selected));
++        const next = visible[(index + event.delta % visible.length + visible.length) % visible.length];
++        if (!next) return { model: this, effects: [] };
++        const epoch = this.epoch + 1;
++        return this.change({ selected: next.id, epoch, detail: '' }, this.screen === 'logs' ? [{ type: 'abort-logs' }, { type: 'load-logs', id: next.id, epoch }] : []);
+       }
+-      case 'start': return job.status === 'running' ? this : new Monitor(this.jobs.map(item => item.id === job.id ? job.start() : item), this.selected);
+-      case 'ask-cancel': return job.status === 'running' ? new Monitor(this.jobs, this.selected, true) : this;
+-      case 'confirm-cancel': return this.confirming ? new Monitor(this.jobs.map(item => item.id === job.id ? job.cancel() : item), this.selected) : this;
+-      case 'dismiss': return new Monitor(this.jobs, this.selected);
++      case 'filter': {
++        const failuresOnly = !this.failuresOnly;
++        const first = this.jobs.find(job => !failuresOnly || job.status === 'failed');
++        return this.change({ failuresOnly, selected: first?.id ?? this.selected, screen: 'jobs', epoch: this.epoch + 1, detail: '' }, [{ type: 'abort-logs' }]);
++      }
++      case 'start': {
++        if (selected.status === 'running' || !this.visibleJobs.some(job => job.id === selected.id)) return { model: this, effects: [] };
++        const started = selected.start();
++        return this.replace(started, [{ type: 'run', id: started.id, run: started.run }]);
++      }
++      case 'ask-cancel': return selected.status === 'running' && this.visibleJobs.some(job => job.id === selected.id) ? this.change({ confirming: true }) : { model: this, effects: [] };
++      case 'confirm-cancel': return this.confirming && selected.status !== 'running' ? this.change({ confirming: false }) : this.confirming ? this.change({ confirming: false, jobs: this.jobs.map(job => job.id === selected.id ? job.cancel() : job) }, [{ type: 'abort', id: selected.id }]) : { model: this, effects: [] };
++      case 'dismiss': return this.confirming ? this.change({ confirming: false }) : this.change({ screen: 'jobs', detail: '', epoch: this.epoch + 1 }, [{ type: 'abort-logs' }]);
++      case 'logs': {
++        const epoch = this.epoch + 1;
++        return this.change({ screen: 'logs', detail: '', epoch }, [{ type: 'abort-logs' }, { type: 'load-logs', id: selected.id, epoch }]);
++      }
++      case 'logs-loaded': return this.screen === 'logs' && event.id === this.selected && event.epoch === this.epoch ? this.change({ detail: event.text }) : { model: this, effects: [] };
++      case 'progress': {
++        const job = this.jobs.find(item => item.id === event.id);
++        return job?.status === 'running' && job.run === event.run ? this.replace(new Job(job.id, job.title, 'running', Math.max(job.percent, event.percent), job.run)) : { model: this, effects: [] };
++      }
++      case 'done': {
++        const job = this.jobs.find(item => item.id === event.id);
++        return job?.status === 'running' && job.run === event.run ? this.replace(new Job(job.id, job.title, event.error ? 'failed' : 'succeeded', event.error ? job.percent : 100, job.run, event.error)) : { model: this, effects: [] };
++      }
+     }
+   }
+-  public get visibleJobs(): readonly Job[] { return this.jobs; }
+ }
+--- 03-input/presentation.ts
++++ 04-async/presentation.ts
+@@ -1,14 +1,20 @@
+ // Copyright 2026 James Ross. SPDX-License-Identifier: Apache-2.0
+-import { table, stringToSurface, stripAnsi, type Surface, type BijouContext } from '@flyingrobots/bijou';
+-import type { Monitor } from './monitor.js';
+-export function present(model: Monitor, ctx: BijouContext, width: number): string {
++import { table, stringToSurface, stripAnsi, type BijouContext, type Surface } from '@flyingrobots/bijou';
++import { Monitor } from './monitor.js';
++export function present(model: Monitor, ctx: BijouContext, width: number, locale: 'en' | 'long' = 'en'): string {
++  const title = locale === 'long' ? 'Job monitor — ausführliche Übersetzung für schmale Fenster' : 'Job monitor';
+   const jobs = model.visibleJobs;
+-  if (model.confirming) return `Cancel ${model.selected}? Enter confirms. Escape keeps it running.`;
++  const rows = jobs.map(job => [job.id === model.selected ? '> ' + job.title : job.title, job.status, String(job.percent) + '%']);
+   if (ctx.mode === 'pipe') return table({ columns: [{ header: 'id' }, { header: 'status' }, { header: 'progress' }, { header: 'error' }], rows: jobs.map(job => [job.id, job.status, String(job.percent), job.error ?? '']), ctx });
+-  if (ctx.mode === 'accessible') return jobs.map(job => `${job.id === model.selected ? 'Selected. ' : ''}${job.title}. Status: ${job.status}. Progress: ${job.percent} percent.${job.error ? ' Error: ' + job.error : ''}`).join('\n');
+-  return ['Job monitor', table({ columns: [{ header: 'Job' }, { header: 'Status' }, { header: 'Progress' }], rows: jobs.map(job => [job.id === model.selected ? '> ' + job.title : job.title, job.status, String(job.percent) + '%']), width, wrap: 'word', ctx }), ...jobs.filter(job => job.error).map(job => `${job.id}: ${job.error}`)].join('\n');
++  if (ctx.mode === 'accessible') return [title, jobs.length ? '' : 'No jobs match the filter.', ...jobs.map(job => `${job.id === model.selected ? 'Selected. ' : ''}${job.title}. Status: ${job.status}. Progress: ${job.percent} percent.${job.error ? ' Error: ' + job.error : ''}`), model.screen === 'logs' ? `Logs for ${model.selected}. ${model.detail || 'Loading logs.'}` : '', model.confirming ? `Cancel ${model.selected}? Enter confirms. Escape keeps it running.` : 'Up and Down select. Enter starts. C opens cancellation. L opens logs. F filters failures. Q quits.'].filter(Boolean).join('\n');
++  const data = table({ columns: [{ header: 'Job' }, { header: 'Status' }, { header: 'Progress' }], rows, width, wrap: 'word', ctx });
++  const detail = model.screen === 'logs' ? `Logs / ${model.selected}\n${model.detail || 'Loading logs…'}` : 'Up/Down: select · Enter: start · c: cancel · l: logs · f: failures · q: quit';
++  const dialog = model.confirming ? `Cancel ${model.selected}?\nEnter: cancel job · Escape: keep running` : '';
++  if (model.confirming) return [title, dialog, `Selected: ${model.selected}. Status: ${model.jobs.find(job => job.id === model.selected)?.status}`].join('\n\n');
++  const failures = jobs.filter(job => job.error).map(job => `${job.id}: ${job.error}`).join('\n');
++  return [title, model.failuresOnly ? 'Filter: failures' : 'Filter: all jobs', data || 'No jobs match the filter.', detail, failures].filter(Boolean).join('\n\n');
+ }
+ export function view(model: Monitor, ctx: BijouContext, width: number, height: number): Surface {
+-  if (width < 80 || height < 24) return stringToSurface('Resize to 80 x 24. Q quits.', width, height);
+-  return stringToSurface(stripAnsi(present(model, ctx, width)) + '\nUp/Down: select. Enter: start. C: cancel. Q: quit.', width, height);
++  if (width < 80 || height < 32) return stringToSurface('Resize to 80 x 32. Q quits.', width, height);
++  return stringToSurface(stripAnsi(present(model, ctx, width)), width, height);
+ }
+--- 03-input/protocol.ts
++++ 04-async/protocol.ts
+@@ -2,7 +2,17 @@
+ export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+ export type MonitorEvent =
+   | { readonly type: 'move'; readonly delta: number }
++  | { readonly type: 'filter' }
+   | { readonly type: 'start' }
+   | { readonly type: 'ask-cancel' }
+   | { readonly type: 'confirm-cancel' }
+-  | { readonly type: 'dismiss' };
++  | { readonly type: 'dismiss' }
++  | { readonly type: 'logs' }
++  | { readonly type: 'progress'; readonly id: string; readonly run: number; readonly percent: number }
++  | { readonly type: 'done'; readonly id: string; readonly run: number; readonly error?: string }
++  | { readonly type: 'logs-loaded'; readonly id: string; readonly epoch: number; readonly text: string };
++export type Effect =
++  | { readonly type: 'run'; readonly id: string; readonly run: number }
++  | { readonly type: 'abort'; readonly id: string }
++  | { readonly type: 'load-logs'; readonly id: string; readonly epoch: number }
++  | { readonly type: 'abort-logs' };

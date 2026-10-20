@@ -1,5 +1,5 @@
 {
-  "edition": "book-v1",
+  "edition": "book-v2",
   "bijou_release": "7.2.0",
   "bijou_release_commit": "123f4a6150963932118cbf763a8a6ec03487e227",
   "node": "v26.10.0",
@@ -12,73 +12,131 @@
   "checks": {
     "typecheck": "passed",
     "vitest": {
-      "files": 2,
-      "tests": 15,
-      "passed": 15
+      "files": 8,
+      "tests": 44,
+      "passed": 44
     },
+    "independent_stages": [
+      {
+        "stage": "01",
+        "directory": "01-model",
+        "cli": "passed",
+        "independent_tests": "passed",
+        "finished_source_available": false
+      },
+      {
+        "stage": "02",
+        "directory": "02-modes",
+        "cli": "passed",
+        "independent_tests": "passed",
+        "finished_source_available": false
+      },
+      {
+        "stage": "03",
+        "directory": "03-input",
+        "cli": "passed",
+        "independent_tests": "passed",
+        "finished_source_available": false
+      },
+      {
+        "stage": "04",
+        "directory": "04-async",
+        "cli": "passed",
+        "independent_tests": "passed",
+        "finished_source_available": false
+      },
+      {
+        "stage": "05",
+        "directory": "05-constraints",
+        "cli": "passed",
+        "independent_tests": "passed",
+        "finished_source_available": false
+      }
+    ],
+    "fresh_install": "npm ci --offline using project-owned npm cache",
+    "source_diffs": [
+      {
+        "from": "01-model",
+        "to": "02-modes",
+        "source_diff_matches": true,
+        "lines": 37
+      },
+      {
+        "from": "02-modes",
+        "to": "03-input",
+        "source_diff_matches": true,
+        "lines": 123
+      },
+      {
+        "from": "03-input",
+        "to": "04-async",
+        "source_diff_matches": true,
+        "lines": 291
+      },
+      {
+        "from": "04-async",
+        "to": "05-constraints",
+        "source_diff_matches": true,
+        "lines": 89
+      }
+    ],
+    "final_stage_modules_byte_identical_to_src": 8,
     "pty": [
       {
+        "stage": "03",
         "scenario": "keyboard",
         "exit": 0,
-        "bytes": 2989,
-        "terminal_flags_restored": true
+        "terminal_flags_restored": true,
+        "output_bytes": 6410,
+        "semantic_assertions": "covered by deterministic App/model tests; PTY checks output and lifecycle"
       },
       {
+        "stage": "03",
         "scenario": "sigterm",
         "exit": 0,
-        "bytes": 950,
-        "terminal_flags_restored": true
+        "terminal_flags_restored": true,
+        "output_bytes": 861,
+        "semantic_assertions": "covered by deterministic App/model tests; PTY checks output and lifecycle"
+      },
+      {
+        "stage": "04",
+        "scenario": "keyboard",
+        "exit": 0,
+        "terminal_flags_restored": true,
+        "output_bytes": 6875,
+        "semantic_assertions": "covered by deterministic App/model tests; PTY checks output and lifecycle"
+      },
+      {
+        "stage": "04",
+        "scenario": "sigterm",
+        "exit": 0,
+        "terminal_flags_restored": true,
+        "output_bytes": 917,
+        "semantic_assertions": "covered by deterministic App/model tests; PTY checks output and lifecycle"
+      },
+      {
+        "stage": "05",
+        "scenario": "keyboard",
+        "exit": 0,
+        "terminal_flags_restored": true,
+        "output_bytes": 6926,
+        "semantic_assertions": "covered by deterministic App/model tests; PTY checks output and lifecycle"
+      },
+      {
+        "stage": "05",
+        "scenario": "sigterm",
+        "exit": 0,
+        "terminal_flags_restored": true,
+        "output_bytes": 950,
+        "semantic_assertions": "covered by deterministic App/model tests; PTY checks output and lifecycle"
       }
     ],
-    "exercises": [
-      {
-        "exercise": "modal",
-        "repaired": false,
-        "exit": 1
-      },
-      {
-        "exercise": "modal",
-        "repaired": true,
-        "exit": 0
-      },
-      {
-        "exercise": "stale",
-        "repaired": false,
-        "exit": 1
-      },
-      {
-        "exercise": "stale",
-        "repaired": true,
-        "exit": 0
-      },
-      {
-        "exercise": "color",
-        "repaired": false,
-        "exit": 1
-      },
-      {
-        "exercise": "color",
-        "repaired": true,
-        "exit": 0
-      },
-      {
-        "exercise": "timer",
-        "repaired": false,
-        "exit": 1
-      },
-      {
-        "exercise": "timer",
-        "repaired": true,
-        "exit": 0
-      }
-    ],
-    "checkpoints_verified": [
-      "01",
-      "02",
-      "03 via actual PTY main application",
-      "04",
-      "05"
-    ]
+    "exercises": {
+      "broken_exit": 1,
+      "repaired_exit": 0,
+      "cases": 4
+    },
+    "package_members": "stage sources, answers, walkthrough, LICENSE and NOTICE verified"
   },
   "limits": [
     "No human screen-reader session performed",
@@ -87,5 +145,17 @@
     "Job work is simulated; no operating-system process runner is implemented",
     "Long-copy fixture is not a localization catalog"
   ],
-  "lockfile_sha256": "670b2bac1f19cc2542c03fe2b6db9358660f4b4f705e232cf18e9207328877c6"
+  "lockfile_sha256": "073d1face7b9a68e9c560d26834e104262404006b9fa86fe1b02e06ba10edf27",
+  "package_version": "1.1.0",
+  "human_walkthrough": {
+    "status": "not_run",
+    "coordination": "User will arrange an unfamiliar reader",
+    "protocol": "walkthrough/README.md",
+    "template": "walkthrough/results-template.json",
+    "interactive_screen_reader_workflow": "not_implemented"
+  },
+  "harness_notes": [
+    "A raw PTY substring assertion initially failed because incremental rendering emits only changed cells (r and nning while retaining u). The harness now observes output/lifecycle; deterministic App/model tests establish semantic input behavior. No application source fix was needed."
+  ],
+  "github_actions": "Pending run at the newly published branch/tag; do not infer hosted success from local checks."
 }

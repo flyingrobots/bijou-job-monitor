@@ -1,6 +1,6 @@
 # Bijou Job Monitor
 
-A small, runnable companion to the Bijou Documentation Book. Build one job monitor across interactive, static/CI, pipe and accessible presentations, then introduce cancellation, late results, constrained geometry and reproducible checks.
+A small, runnable companion to the Bijou Book. Build one job monitor across interactive, static/CI, pipe and accessible presentations, then introduce cancellation, late results, constrained geometry and reproducible checks.
 
 The example simulates jobs with scheduled events. It does not launch build tools, contact a service, publish packages, or cancel operating-system processes. The `test` job deliberately fails so failure stays visible in every presentation.
 
@@ -22,9 +22,35 @@ NO_COLOR=1 npm start -- --mode=static --locale=long
 
 Keyboard: Up/Down select a job; Enter starts it; `c` opens confirmation; Enter confirms and Escape keeps it running; `l` opens logs; `f` filters failed jobs; `j`/`k` scroll; `q` or Ctrl+C quits. A dialog owns selection and action keys; quitting is an explicit global command. At least 24×8 cells is the practical small-viewport target. The 1-cell geometry tests establish bounds only.
 
-## Working checkpoints
+## Progressive build stages
 
-Each command is a runnable checkpoint at the same fixed edition tag, `book-v1`. The final application is shared rather than copied into five diverging implementations.
+Edition `book-v2` adds five independent source snapshots. Each stage owns its
+modules and imports neither the finished application nor another stage. Install
+once from the pinned root lock, then build along using the actual source diffs:
+
+```sh
+npm run stage -- 01
+npm run stage:check -- 01
+npm run stage:diff -- 01 02
+npm run stage -- 02
+npm run stage -- 03
+npm run stage -- 04
+npm run stage -- 05
+```
+
+[The stage guide](stages/README.md) states each addition, deliberate limitation
+and observable completion criterion. Stages 03 and 04 use real keyboard input
+when run in a terminal; stages 01 and 02 print and exit. All stage checks run in
+ordinary tests and CI. Stage 05 matches the finished application modules exactly.
+
+Attempt the broken exercises before opening the [answer key](answers/README.md).
+The [walkthrough protocol](walkthrough/README.md) and blank recording form are
+prepared for an actual unfamiliar reader and assistive-tool session. No human
+results are claimed. The accessible CLI remains a static snapshot.
+
+## Finished-application inspections
+
+These original `checkpoint` commands inspect the finished application. They are retained at `book-v2` and the original `book-v1`; use the separate `stage` commands above for incremental source implementations.
 
 | Book workshop | Command | Working state |
 | --- | --- | --- |
