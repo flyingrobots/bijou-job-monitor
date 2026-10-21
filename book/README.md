@@ -18,8 +18,8 @@ That immutable tag predates the book's relocation. Clone the current repository
 to obtain both the book and app; check out `book-v2` to reproduce the recorded
 application evidence exactly. No new application release is implied by this move.
 
-The [Design Archive](https://github.com/flyingrobots/bijou/blob/chore/tracker-workflow/docs/book/bijou-archive.pdf)
-and [frozen complete edition](https://github.com/flyingrobots/bijou/blob/chore/tracker-workflow/docs/book/bijou-designs.pdf)
+The [Design Archive](https://github.com/flyingrobots/bijou/blob/main/docs/book/bijou-archive.pdf)
+and [frozen complete edition](https://github.com/flyingrobots/bijou/blob/main/docs/book/bijou-designs.pdf)
 remain in Bijou. Their 426 historical records and exact-source corpus are not
 copied into this teaching repository. The complete edition retains its own
 historical teaching snapshot; future teaching edits belong here.
