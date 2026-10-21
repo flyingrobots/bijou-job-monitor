@@ -1,0 +1,41 @@
+{
+  "date": "2026-10-21",
+  "teaching_pdf": {
+    "path": "bijou-book.pdf",
+    "pages": 106,
+    "bytes": 14793714,
+    "sha256": "c8e322f0257a4f57fa025fab78db7e5c18cbc5cd57875bfc039b4e0f3de1aaf3"
+  },
+  "build": {
+    "engine": "LuaLaTeX",
+    "passes": 3,
+    "output": "/tmp/bijou-design-book/migration/build",
+    "undefined_references": false,
+    "source_asset_manifest": "migration-manifest.json",
+    "bijou_checkout_inputs": []
+  },
+  "preservation": {
+    "complete_pages": 1933,
+    "complete_pages_with_changed_text": [],
+    "historical_records_verified_unchanged": 426,
+    "corpus_unchanged": true,
+    "archive_and_complete_checked_in_pdfs_unchanged": true
+  },
+  "companion_code": {
+    "commit": "1c5c47ce0eeeb7342fb7e95e6424a2256c1288a1",
+    "tag": "book-v2",
+    "code_modified_by_move": false
+  },
+  "human_walkthrough": "prepared; not conducted",
+  "limitations": [
+    "Original capture manifests describe their recorded source checkouts, not this new publication path.",
+    "The frozen complete edition intentionally preserves the preceding publication text."
+  ],
+  "companion_validation": {
+    "command": "npm run verify",
+    "typecheck": "passed",
+    "test_files": 8,
+    "tests_passed": 44,
+    "date": "2026-10-21"
+  }
+}

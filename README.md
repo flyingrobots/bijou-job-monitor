@@ -2,6 +2,8 @@
 
 A small, runnable companion to the Bijou Book. Build one job monitor across interactive, static/CI, pipe and accessible presentations, then introduce cancellation, late results, constrained geometry and reproducible checks.
 
+[Read the Bijou Book](book/bijou-book.pdf) · [Book sources and build instructions](book/README.md)
+
 The example simulates jobs with scheduled events. It does not launch build tools, contact a service, publish packages, or cancel operating-system processes. The `test` job deliberately fails so failure stays visible in every presentation.
 
 ## Reproduce this edition
@@ -88,4 +90,4 @@ The app has no localization catalog yet: `--locale=long` is a deliberate text-ex
 
 Copyright © 2026 James Ross. Example code is Apache-2.0; see the complete [LICENSE](LICENSE) and [NOTICE](NOTICE). Preserve these files, source-file copyright notices and any applicable dependency notices when redistributing code. Book prose and illustrations carry their own CC BY 4.0 notice.
 
-The book is being prepared in `docs/book` in [flyingrobots/bijou](https://github.com/flyingrobots/bijou). The distributed book records its exact companion commit. Report errata in [this repository’s issue tracker](https://github.com/flyingrobots/bijou-job-monitor/issues).
+The teaching book and its modular LaTeX sources live in [book/](book/README.md), beside the application. The historical Design Archive and frozen complete edition remain in [flyingrobots/bijou](https://github.com/flyingrobots/bijou). The distributed book records its exact companion commit. Report errata in [this repository’s issue tracker](https://github.com/flyingrobots/bijou-job-monitor/issues).
