@@ -1,0 +1,26 @@
+[
+  {
+    "from": "01-model",
+    "to": "02-modes",
+    "file": "stages/diffs/01-model--02-modes.patch",
+    "lines": 37
+  },
+  {
+    "from": "02-modes",
+    "to": "03-input",
+    "file": "stages/diffs/02-modes--03-input.patch",
+    "lines": 123
+  },
+  {
+    "from": "03-input",
+    "to": "04-async",
+    "file": "stages/diffs/03-input--04-async.patch",
+    "lines": 291
+  },
+  {
+    "from": "04-async",
+    "to": "05-constraints",
+    "file": "stages/diffs/04-async--05-constraints.patch",
+    "lines": 89
+  }
+]

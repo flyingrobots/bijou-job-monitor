@@ -18,6 +18,7 @@
     "src/**/*.ts",
     "test/**/*.ts",
     "checkpoints/**/*.ts",
-    "exercises/**/*.ts"
+    "exercises/**/*.ts",
+    "stages/**/*.ts"
   ]
 }

@@ -1,0 +1,72 @@
+# Unfamiliar-reader and accessibility walkthrough
+
+Status: **prepared, not conducted**. No participant results are included. An agent
+running commands is an automated reproduction check, not an unfamiliar human reader.
+
+## Facilitation
+
+Use someone who has not authored or rehearsed the example. Give them the exact
+book edition and companion commit, a clean checkout and the task prompts below.
+Let them follow the book before offering a hint. Record the page, command, observed
+result and any assistance. A successful assisted step is different from an
+independent completion. Leave the original confusing passage identifiable when
+recording its proposed repair.
+
+Start with the Node/npm versions recorded by the edition. Record terminal,
+operating system, viewport and any assistive tool. `results-template.json` is an
+empty recording form, not a verification receipt. Keep `not_run` until a real
+session occurs; do not populate answers with an agent's predictions.
+
+## Session A — Build from a clean checkout
+
+1. Find the edition's source and reproduce installation without facilitator help.
+2. Run stage 01. Explain which values identify a job and which describe its label.
+3. Read the first diff and run stage 02. Identify the failed job without color and
+   describe what pipe mode preserves. Notice that stage 02's interactive specimen
+   is a printed fixture, not a live session.
+4. Run stage 03. Start compile, open cancellation, attempt movement, dismiss the
+   dialog, then cancel it. Explain the state after each action.
+5. Read the asynchronous step. Run stage 04, open compile logs and select test.
+   Explain why a late response must not replace current detail. Use the test or
+   exercise if wall-clock timing does not make the race visible.
+6. Run stage 05 and resize to 24×8. Find the current status and available actions.
+   Inspect a failure and return to another job. Explain what information scrolling
+   preserves and what is no longer simultaneously visible.
+7. Attempt one broken exercise before using its answer. Use the hint, then the
+   diagnosis if necessary; record which level was needed.
+8. Find the license and the exact companion commit used by the book. Identify one
+   claim the automated tests do not establish.
+
+Completion criteria: installation is reproducible; every stage's declared outcome
+can be observed; the reader can distinguish state, effects and presentation; all
+required corrections are attached to a reproducible task and passage. Record
+failures and assistance instead of turning the criteria into assumed passes.
+
+## Session B — Keyboard-only interactive task
+
+Run the final stage in a supported terminal without using a pointer. Ask the
+participant to start a job, inspect logs, select another job, filter failures,
+open and dismiss cancellation, and quit. Include a narrow viewport. Record focus
+confusion, discoverability, hidden controls, misleading status and final terminal
+state. The completion is a human task observation, not merely a key-routing test.
+
+## Session C — Reading with an assistive tool
+
+Use the participant's actual tool and record its name and version. Run the
+accessible fixture and the color-free static fixture separately. Ask which job
+failed, why it failed, what is selected, and which actions the text describes.
+Observe reading order and ambiguity. Do not substitute the expected answer for
+what the participant actually understood.
+
+The accessible CLI fixture prints once and exits. It does not implement an
+interactive screen-reader session. Testing a live screen-reader workflow requires
+an implemented interaction contract and its own task session. Record that item as
+`not_implemented`, not as a failed or passed snapshot-reading observation.
+
+## Turn observations into repairs
+
+For every problem retain: edition, source commit, task, page, exact command,
+expected observation, actual observation, assistance, reproduction and proposed
+change. Distinguish a code defect, an explanation gap, an environment mismatch and
+an unimplemented capability. After a repair, repeat the affected task; use another
+unfamiliar participant before calling its discoverability independently verified.

@@ -1,0 +1,37 @@
+--- 01-model/fixtures.ts
++++ 02-modes/fixtures.ts
+@@ -0,0 +1,6 @@
++// Copyright 2026 James Ross. SPDX-License-Identifier: Apache-2.0
++import { Job } from './job.js';
++import { Monitor } from './monitor.js';
++export function exampleSnapshot(): Monitor {
++  return new Monitor([new Job('compile', 'Compile the application', 'succeeded', 100, 1), new Job('test', 'Run the tests', 'failed', 60, 1, 'Fixture failure: assertion did not pass'), new Job('publish', 'Publish the package', 'running', 40, 1)], 'publish');
++}
+--- 01-model/main.ts
++++ 02-modes/main.ts
+@@ -1,4 +1,9 @@
+ // Copyright 2026 James Ross. SPDX-License-Identifier: Apache-2.0
+-import { Monitor } from './monitor.js';
++import { createNodeContext } from '@flyingrobots/bijou-node';
++import { exampleSnapshot } from './fixtures.js';
+ import { present } from './presentation.js';
+-process.stdout.write(present(Monitor.initial()) + '\n');
++const ctx = createNodeContext();
++for (const mode of ['interactive', 'static', 'pipe', 'accessible'] as const) {
++  process.stdout.write('\n' + mode.toUpperCase() + ' content specimen\n');
++  process.stdout.write(present(exampleSnapshot(), { ...ctx, mode }, 80) + '\n');
++}
+--- 01-model/presentation.ts
++++ 02-modes/presentation.ts
+@@ -1,5 +1,9 @@
+ // Copyright 2026 James Ross. SPDX-License-Identifier: Apache-2.0
++import { table, type BijouContext } from '@flyingrobots/bijou';
+ import type { Monitor } from './monitor.js';
+-export function present(model: Monitor): string {
+-  return model.jobs.map(job => `${job.id}: ${job.status} ${job.percent}%`).join('\n');
++export function present(model: Monitor, ctx: BijouContext, width: number): string {
++  const jobs = model.visibleJobs;
++  if (ctx.mode === 'pipe') return table({ columns: [{ header: 'id' }, { header: 'status' }, { header: 'progress' }, { header: 'error' }], rows: jobs.map(job => [job.id, job.status, String(job.percent), job.error ?? '']), ctx });
++  if (ctx.mode === 'accessible') return jobs.map(job => `${job.id === model.selected ? 'Selected. ' : ''}${job.title}. Status: ${job.status}. Progress: ${job.percent} percent.${job.error ? ' Error: ' + job.error : ''}`).join('\n');
++  return ['Job monitor', table({ columns: [{ header: 'Job' }, { header: 'Status' }, { header: 'Progress' }], rows: jobs.map(job => [job.id === model.selected ? '> ' + job.title : job.title, job.status, String(job.percent) + '%']), width, wrap: 'word', ctx }), ...jobs.filter(job => job.error).map(job => `${job.id}: ${job.error}`)].join('\n');
+ }
