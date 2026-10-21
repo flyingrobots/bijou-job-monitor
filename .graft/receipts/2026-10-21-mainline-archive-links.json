@@ -1,0 +1,15 @@
+{
+  "schema": "graft.receipt.v1",
+  "sessionId": "5c4a616a-62e8-4f35-bb6c-58686ba3775a",
+  "agent": "bijou-context-recovery",
+  "task": "Use canonical mainline URLs for the separately published historical archive",
+  "bytesConsumed": 4427,
+  "filesRead": [
+    "book/README.md"
+  ],
+  "filesModified": [
+    "book/README.md"
+  ],
+  "tripwires": [],
+  "validation": "Two intended archive links updated; application, teaching PDF and all publication assets unchanged. CI verifies the resulting PR."
+}
